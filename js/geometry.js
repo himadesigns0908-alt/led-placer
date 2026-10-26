@@ -119,14 +119,14 @@
         if (force) placed = placeRow(poly, firstOff, stepAlong, halfW, halfL, ccw);
       } else {
         let off = firstOff;
-        let rows = 0, guard = 300;
+        let rows = 0, guard = 50;
         while (guard-- > 0) {
           const row = placeRow(poly, off, stepAlong, halfW, halfL, ccw);
           if (!row.length) break;
           placed.push(...row);
           rows++;
           off += rowOffset;
-          if (off > (bb[3]-bb[1]) && off > (bb[2]-bb[0])) break;
+          if (off > Math.max(bb[3]-bb[1], bb[2]-bb[0])) break;
         }
         if (rows === 0) {
           skipped = true;
