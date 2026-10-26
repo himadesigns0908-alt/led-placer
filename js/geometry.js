@@ -70,8 +70,8 @@ window.Geometry = (function () {
       poly.forEach(p => { minX=Math.min(minX,p[0]); minY=Math.min(minY,p[1]); maxX=Math.max(maxX,p[0]); maxY=Math.max(maxY,p[1]); });
       const minSide = Math.min(maxX-minX, maxY-minY);
 
-      // If the letter is too thin, and force is checked, draw a straight line
       if (minSide < (module.w + 2*safetyMM) * unitsPerMM && force) {
+        // BULLETPROOF FORCE MODE: Just draw a straight line across the middle
         let x = minX + (module.l/2) * unitsPerMM;
         const cy = (minY + maxY) / 2;
         while (x <= maxX) {
@@ -79,6 +79,7 @@ window.Geometry = (function () {
            x += stepAlong;
         }
       } else if (minSide >= (module.w + 2*safetyMM) * unitsPerMM) {
+        // Normal Mode: Try to draw proper contours
         let off = firstOff;
         let rows = 0;
         while (rows < 100) {
