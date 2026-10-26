@@ -110,9 +110,25 @@ window.Geometry = (function () {
       total += placed.length;
       perGlyph.push({ index: perGlyph.length+1, count: placed.length, skipped: placed.length === 0, reason: placed.length === 0 ? "No room" : "", placed, poly, bbox: [minX,minY,maxX,maxY] });
     }
-
+if (force && total === 0) {
+    for (const g of glyphs) {
+        let cx = 0, cy = 0;
+        g.pts.forEach(p => { cx += p[0]; cy += p[1]; });
+        cx /= g.pts.length; cy /= g.pts.length;
+        // Draw a simple horizontal row of LEDs down the middle
+        let x = Math.min(...g.pts.map(p=>p[0]));
+        const maxX = Math.max(...g.pts.map(p=>p[0]));
+        while (x <= maxX) {
+            perGlyph[0].placed.push({ cx: x, cy: cy, angle: 0 });
+            total++;
+            x += stepAlong;
+        }
+        perGlyph[0].count = perGlyph[0].placed.length;
+        perGlyph[0].skipped = false;
+    }
     return { perGlyph, total };
   }
 
+}
   return { place };
 })();
