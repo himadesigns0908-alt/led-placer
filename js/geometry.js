@@ -1,7 +1,7 @@
 window.Geometry = (function () {
   function dist(a,b){ return Math.hypot(a[0]-b[0], a[1]-b[1]); }
 
-  function placeContour(poly, off, stepAlong, halfW, halfL) {
+  function placeRow(poly, off, stepAlong, halfW, halfL) {
     const placed = [];
     if (!window.ClipperLib) return placed;
 
@@ -10,7 +10,7 @@ window.Geometry = (function () {
     poly.forEach(p => path.push(new ClipperLib.IntPoint(p[0] * scale, p[1] * scale)));
 
     const co = new ClipperLib.ClipperOffset(2, 0.25);
-    co.AddPath(path, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+    co.AddPath(path, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
     const solution = new ClipperLib.Paths();
     co.Execute(solution, -off * scale);
 
@@ -68,16 +68,29 @@ window.Geometry = (function () {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       poly.forEach(p => { minX=Math.min(minX,p[0]); minY=Math.min(minY,p[1]); maxX=Math.max(maxX,p[0]); maxY=Math.max(maxY,p[1]); });
 
-      // NO FORCE GRID. ONLY PROPER CONTOURS.
-      let off = firstOff;
-      let rows = 0;
-      while (rows < 100) {
-        const row = placeContour(poly, off, stepAlong, halfW, halfL);
-        if (!row.length) break;
-        placed.push(...row);
-        rows++;
-        off += rowOffset;
-        if (off > Math.max(maxY-minY, maxX-minX)) break; 
+      // BULLETPROOF FORCE MODE
+      if (force) {
+        let y = minY + firstOff;
+        while (y <= maxY - firstOff) {
+            let x = minX + firstOff;
+            while (x <= maxX - firstOff) {
+                placed.push({ cx: x, cy: y, angle: 0 });
+                x += stepAlong;
+            }
+            y += rowOffset;
+        }
+      } else {
+        // Standard contour drawing (only works if SVG is solid)
+        let off = firstOff;
+        let rows = 0;
+        while (rows < 100) {
+          const row = placeRow(poly, off, stepAlong, halfW, halfL);
+          if (!row.length) break;
+          placed.push(...row);
+          rows++;
+          off += rowOffset;
+          if (off > Math.max(maxY-minY, maxX-minX)) break; 
+        }
       }
 
       total += placed.length;
