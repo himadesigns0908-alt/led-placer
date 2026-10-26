@@ -6,7 +6,7 @@ window.Geometry = (function () {
     const placed = [];
     if (!window.ClipperLib) return placed;
 
-    const scale = 100000; 
+    const scale = 10000; 
     const path = new ClipperLib.Path();
     poly.forEach(p => path.push(new ClipperLib.IntPoint(p[0] * scale, p[1] * scale)));
 
@@ -71,7 +71,6 @@ window.Geometry = (function () {
       const minSide = Math.min(maxX-minX, maxY-minY);
 
       if (minSide < (module.w + 2*safetyMM) * unitsPerMM && force) {
-        // BULLETPROOF FORCE MODE: Just draw a straight line across the middle
         let x = minX + (module.l/2) * unitsPerMM;
         const cy = (minY + maxY) / 2;
         while (x <= maxX) {
@@ -79,7 +78,6 @@ window.Geometry = (function () {
            x += stepAlong;
         }
       } else if (minSide >= (module.w + 2*safetyMM) * unitsPerMM) {
-        // Normal Mode: Try to draw proper contours
         let off = firstOff;
         let rows = 0;
         while (rows < 100) {
