@@ -117,16 +117,18 @@
     const margin = Math.max(vb[2], vb[3]) * 0.03;
     preview.setAttribute("viewBox", `${vb[0]-margin} ${vb[1]-margin} ${vb[2]+margin*2} ${vb[3]+margin*2}`);
 
+    // Draw outlines (WHITE so they are visible on the dark background)
     perGlyph.forEach(g => {
       const d = g.poly.map((p,i)=> (i?"L":"M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + " Z";
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", d);
-      path.setAttribute("fill", "none");
-      path.setAttribute("stroke", g.skipped && g.count===0 ? "#ff6b6b" : "#8a93a6");
+      path.setAttribute("fill", "rgba(255,255,255,0.05)"); // faint fill
+      path.setAttribute("stroke", g.skipped && g.count===0 ? "#ff6b6b" : "#ffffff"); // white stroke
       path.setAttribute("stroke-width", Math.max(0.3, (mod.w*unitsPerMM)*0.03));
       preview.appendChild(path);
     });
 
+    // Draw LED Modules
     const modW = mod.l * unitsPerMM;
     const modH = mod.w * unitsPerMM;
     perGlyph.forEach(g => {
