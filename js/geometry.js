@@ -4,22 +4,20 @@ window.Geometry = (function () {
   
   function placeRow(poly, off, stepAlong, halfW, halfL, ccw) {
     const placed = [];
-    if (!window.ClipperLib) return placed; // Safety check
+    if (!window.ClipperLib) return placed;
 
-    // Convert our polygon to the Clipper format (integers)
-    const scale = 1000;
+    // WE INCREASE THE SCALE to 100,000 so the 12-meter sign doesn't lose precision
+    const scale = 100000; 
     const path = new ClipperLib.Path();
     poly.forEach(p => path.push(new ClipperLib.IntPoint(p[0] * scale, p[1] * scale)));
 
-    // Calculate inward offset using Clipper
     const co = new ClipperLib.ClipperOffset(2, 0.25);
     co.AddPath(path, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
     const solution = new ClipperLib.Paths();
-    co.Execute(solution, -off * scale); // Negative offset for inward
+    co.Execute(solution, -off * scale);
 
     if (solution.length === 0) return placed;
 
-    // Walk the offset path and place modules
     for (const shifted of solution) {
       if (shifted.length < 3) continue;
       let acc = 0;
@@ -35,7 +33,6 @@ window.Geometry = (function () {
           const cx = a[0] + (b[0] - a[0]) * (t / segLen);
           const cy = a[1] + (b[1] - a[1]) * (t / segLen);
           
-          // Check if the rectangle fits inside the original letter
           const ca = Math.cos(ang), sa = Math.sin(ang);
           const corners = [
             [-halfL, -halfW], [halfL, -halfW], [halfL, halfW], [-halfL, halfW]
@@ -69,8 +66,9 @@ window.Geometry = (function () {
     for (const g of glyphs) {
       const poly = g.pts;
       let placed = [];
+      let skipped = false;
+      let reason = "";
       
-      // Determine if poly is clockwise or counter-clockwise
       let area = 0;
       for (let i=0; i<poly.length; i++) {
          let j = (i+1)%poly.length;
@@ -78,30 +76,33 @@ window.Geometry = (function () {
       }
       const isCCW = area > 0;
       
-      // Bounding box for skipping
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       poly.forEach(p => { minX=Math.min(minX,p[0]); minY=Math.min(minY,p[1]); maxX=Math.max(maxX,p[0]); maxY=Math.max(maxY,p[1]); });
       const minSide = Math.min(maxX-minX, maxY-minY);
 
       if (minSide < (module.w + 2*safetyMM) * unitsPerMM && !force) {
-        perGlyph.push({ index: perGlyph.length+1, count: 0, skipped: true, reason: "Too narrow", placed: [], poly, bbox: [minX,minY,maxX,maxY] });
-        continue;
-      }
-
-      // Place rows
-      let off = firstOff;
-      let rows = 0;
-      while (rows < 50) {
-        const row = placeRow(poly, off, stepAlong, halfW, halfL, isCCW);
-        if (!row.length) break;
-        placed.push(...row);
-        rows++;
-        off += rowOffset;
-        if (off > Math.max(maxY-minY, maxX-minX)) break; // Prevent infinite loop
+        skipped = true;
+        reason = "Too narrow";
+      } else {
+        let off = firstOff;
+        let rows = 0;
+        while (rows < 50) {
+          const row = placeRow(poly, off, stepAlong, halfW, halfL, isCCW);
+          if (!row.length) break;
+          placed.push(...row);
+          rows++;
+          off += rowOffset;
+          if (off > Math.max(maxY-minY, maxX-minX)) break; 
+        }
+        
+        if (placed.length === 0) {
+          skipped = true;
+          reason = "No room";
+        }
       }
 
       total += placed.length;
-      perGlyph.push({ index: perGlyph.length+1, count: placed.length, skipped: placed.length === 0, reason: placed.length === 0 ? "No room" : "", placed, poly, bbox: [minX,minY,maxX,maxY] });
+      perGlyph.push({ index: perGlyph.length+1, count: placed.length, skipped, reason, placed, poly, bbox: [minX,minY,maxX,maxY] });
     }
 
     return { perGlyph, total };
