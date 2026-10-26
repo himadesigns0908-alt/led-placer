@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LED Module Placer</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <h1>LED Module Placer</h1>
+  <span class="sub">SVG in → modules placed → SVG out</span>
+</header>
+
+<main>
+  <aside>
+    <div id="drop">Drop SVG here<br>or click to choose</div>
+    <input id="file" type="file" accept=".svg,image/svg+xml" hidden>
+
+    <div class="field">
+      <label>Module</label>
+      <div class="modules" id="moduleList">
+        <div class="mod active" data-mod="A"><b>A</b><span>10 × 40 mm</span></div>
+        <div class="mod" data-mod="B"><b>B</b><span>12.7 × 76.2 mm</span></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field"><label>Gap along (mm)</label><input id="gapAlong" type="number" value="38.1" step="0.1"></div>
+      <div class="field"><label>Gap between rows (mm)</label><input id="gapRows" type="number" value="40" step="0.1"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Safety margin (mm)</label><input id="safety" type="number" value="2" step="0.5"></div>
+      <div class="field"><label>Real width (mm) — fallback</label><input id="realWidth" type="number" placeholder="only if SVG has no units"></div>
+    </div>
+
+    <div class="toggle">
+      <input id="force" type="checkbox">
+      <label for="force">Force-place skipped glyphs</label>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><span>Glyphs placed</span><b id="statGlyphs">–</b></div>
+      <div class="stat"><span>Total modules</span><b id="statTotal">–</b></div>
+    </div>
+
+    <div id="warn"></div>
+    <div id="err"></div>
+    <div class="perGlyph" id="perGlyph"></div>
+
+    <button id="download" disabled>Download SVG</button>
+    <button id="reset" class="secondary">Reset</button>
+  </aside>
+
+  <section class="stage">
+    <div class="legend">
+      <span><i class="sw" style="background:#4ea1ff"></i>Module A</span>
+      <span><i class="sw" style="background:#57d18b"></i>Module B</span>
+      <span><i class="sw" style="background:#8a93a6"></i>Outline</span>
+      <span><i class="sw" style="background:#ff6b6b"></i>Skipped</span>
+    </div>
+    <div id="previewWrap"><svg id="preview" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  </section>
+</main>
+
+<script src="js/svg-parse.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
