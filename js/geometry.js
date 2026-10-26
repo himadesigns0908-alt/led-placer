@@ -2,7 +2,6 @@ window.Geometry = (function () {
   
   function dist(a,b){ return Math.hypot(a[0]-b[0], a[1]-b[1]); }
 
-  // This function creates one perfect row (contour) of LEDs
   function placeContour(poly, off, stepAlong, halfW, halfL) {
     const placed = [];
     if (!window.ClipperLib) return placed;
@@ -11,7 +10,6 @@ window.Geometry = (function () {
     const path = new ClipperLib.Path();
     poly.forEach(p => path.push(new ClipperLib.IntPoint(p[0] * scale, p[1] * scale)));
 
-    // 1. Generate the inward offset line (the "skeleton" path)
     const co = new ClipperLib.ClipperOffset(2, 0.25);
     co.AddPath(path, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
     const solution = new ClipperLib.Paths();
@@ -19,27 +17,21 @@ window.Geometry = (function () {
 
     if (solution.length === 0) return placed;
 
-    // 2. Walk along the contour line and drop modules
     for (const shifted of solution) {
       if (shifted.length < 3) continue;
       let acc = 0;
-      
-      // Resample the path to ensure even spacing
       for (let i = 0; i < shifted.length; i++) {
         const a = [shifted[i].X / scale, shifted[i].Y / scale];
         const b = [shifted[(i + 1) % shifted.length].X / scale, shifted[(i + 1) % shifted.length].Y / scale];
         const segLen = dist(a, b);
         if (segLen === 0) continue;
-        
-        // Calculate tangent angle for rotation
         const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-        
         let t = (stepAlong - (acc % stepAlong)) % stepAlong;
+
         while (t <= segLen) {
           const cx = a[0] + (b[0] - a[0]) * (t / segLen);
           const cy = a[1] + (b[1] - a[1]) * (t / segLen);
           
-          // 3. Check if the rectangle fits inside the original letter
           const ca = Math.cos(ang), sa = Math.sin(ang);
           const corners = [
             [-halfL, -halfW], [halfL, -halfW], [halfL, halfW], [-halfL, halfW]
@@ -63,7 +55,6 @@ window.Geometry = (function () {
   function place(glyphs, module, gapAlongMM, gapRowsMM, safetyMM, unitsPerMM, force) {
     const stepAlong = (module.l + gapAlongMM) * unitsPerMM;
     const rowOffset = (module.w + gapRowsMM) * unitsPerMM;
-    // Center the first row so it doesn't touch the edge immediately
     const firstOff  = (module.w / 2 + safetyMM) * unitsPerMM;
     const halfL     = (module.l / 2) * unitsPerMM;
     const halfW     = (module.w / 2) * unitsPerMM;
@@ -77,18 +68,27 @@ window.Geometry = (function () {
       
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       poly.forEach(p => { minX=Math.min(minX,p[0]); minY=Math.min(minY,p[1]); maxX=Math.max(maxX,p[0]); maxY=Math.max(maxY,p[1]); });
-      
-      let off = firstOff;
-      let rows = 0;
-      
-      // Keep adding rows inward until we run out of space
-      while (rows < 100) {
-        const row = placeContour(poly, off, stepAlong, halfW, halfL);
-        if (!row.length) break;
-        placed.push(...row);
-        rows++;
-        off += rowOffset;
-        if (off > Math.max(maxY-minY, maxX-minX)) break; 
+      const minSide = Math.min(maxX-minX, maxY-minY);
+
+      // If the letter is too thin, and force is checked, draw a straight line
+      if (minSide < (module.w + 2*safetyMM) * unitsPerMM && force) {
+        let x = minX + (module.l/2) * unitsPerMM;
+        const cy = (minY + maxY) / 2;
+        while (x <= maxX) {
+           placed.push({ cx: x, cy: cy, angle: 0 });
+           x += stepAlong;
+        }
+      } else if (minSide >= (module.w + 2*safetyMM) * unitsPerMM) {
+        let off = firstOff;
+        let rows = 0;
+        while (rows < 100) {
+          const row = placeContour(poly, off, stepAlong, halfW, halfL);
+          if (!row.length) break;
+          placed.push(...row);
+          rows++;
+          off += rowOffset;
+          if (off > Math.max(maxY-minY, maxX-minX)) break; 
+        }
       }
 
       total += placed.length;
