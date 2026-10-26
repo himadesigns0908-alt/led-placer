@@ -6,7 +6,6 @@ window.Geometry = (function () {
     const placed = [];
     if (!window.ClipperLib) return placed;
 
-    // WE INCREASE THE SCALE to 100,000 so the 12-meter sign doesn't lose precision
     const scale = 100000; 
     const path = new ClipperLib.Path();
     poly.forEach(p => path.push(new ClipperLib.IntPoint(p[0] * scale, p[1] * scale)));
@@ -80,9 +79,10 @@ window.Geometry = (function () {
       poly.forEach(p => { minX=Math.min(minX,p[0]); minY=Math.min(minY,p[1]); maxX=Math.max(maxX,p[0]); maxY=Math.max(maxY,p[1]); });
       const minSide = Math.min(maxX-minX, maxY-minY);
 
+      // IF FORCE IS CHECKED, WE SKIP THE THICKNESS CHECK COMPLETELY
       if (minSide < (module.w + 2*safetyMM) * unitsPerMM && !force) {
         skipped = true;
-        reason = "Too narrow";
+        reason = "Too narrow for module";
       } else {
         let off = firstOff;
         let rows = 0;
@@ -95,9 +95,19 @@ window.Geometry = (function () {
           if (off > Math.max(maxY-minY, maxX-minX)) break; 
         }
         
+        if (placed.length === 0 && force) {
+          // IF FORCE IS ON AND IT STILL FAILS, DRAW A STRAIGHT LINE
+          let x = minX;
+          const cy = (minY + maxY) / 2;
+          while (x <= maxX) {
+             placed.push({ cx: x, cy: cy, angle: 0 });
+             x += stepAlong;
+          }
+        }
+
         if (placed.length === 0) {
           skipped = true;
-          reason = "No room";
+          reason = "No room for a full row";
         }
       }
 
