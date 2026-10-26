@@ -1,6 +1,4 @@
 window.Geometry = (function () {
-  // We load Clipper2 from a CDN for perfect polygon offsetting.
-  // If it hasn't loaded yet, we fall back to a safe wait.
   
   function dist(a,b){ return Math.hypot(a[0]-b[0], a[1]-b[1]); }
   
@@ -72,7 +70,7 @@ window.Geometry = (function () {
       const poly = g.pts;
       let placed = [];
       
-      // Determine if poly is clockwise or counter-clockwise (Clipper needs this for inward)
+      // Determine if poly is clockwise or counter-clockwise
       let area = 0;
       for (let i=0; i<poly.length; i++) {
          let j = (i+1)%poly.length;
@@ -80,7 +78,7 @@ window.Geometry = (function () {
       }
       const isCCW = area > 0;
       
-      // If shape is too small, skip
+      // Bounding box for skipping
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       poly.forEach(p => { minX=Math.min(minX,p[0]); minY=Math.min(minY,p[1]); maxX=Math.max(maxX,p[0]); maxY=Math.max(maxY,p[1]); });
       const minSide = Math.min(maxX-minX, maxY-minY);
@@ -94,12 +92,7 @@ window.Geometry = (function () {
       let off = firstOff;
       let rows = 0;
       while (rows < 50) {
-        // Since Clipper2 handles offsets differently based on winding, we invert offset for holes if needed
-        // For simplicity in this browser version, we rely on the library's robust math.
         const row = placeRow(poly, off, stepAlong, halfW, halfL, isCCW);
-        if (!row.length && rows === 0 && force) {
-           placed.push(...placeRow(poly, firstOff, stepAlong, halfW, halfL, isCCW));
-        }
         if (!row.length) break;
         placed.push(...row);
         rows++;
@@ -110,25 +103,9 @@ window.Geometry = (function () {
       total += placed.length;
       perGlyph.push({ index: perGlyph.length+1, count: placed.length, skipped: placed.length === 0, reason: placed.length === 0 ? "No room" : "", placed, poly, bbox: [minX,minY,maxX,maxY] });
     }
-if (force && total === 0) {
-    for (const g of glyphs) {
-        let cx = 0, cy = 0;
-        g.pts.forEach(p => { cx += p[0]; cy += p[1]; });
-        cx /= g.pts.length; cy /= g.pts.length;
-        // Draw a simple horizontal row of LEDs down the middle
-        let x = Math.min(...g.pts.map(p=>p[0]));
-        const maxX = Math.max(...g.pts.map(p=>p[0]));
-        while (x <= maxX) {
-            perGlyph[0].placed.push({ cx: x, cy: cy, angle: 0 });
-            total++;
-            x += stepAlong;
-        }
-        perGlyph[0].count = perGlyph[0].placed.length;
-        perGlyph[0].skipped = false;
-    }
+
     return { perGlyph, total };
   }
 
-}
   return { place };
 })();
